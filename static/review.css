@@ -1,0 +1,347 @@
+/* Review ekran: tabla, eval bar, panel sa grafikonom i potezima */
+:root {
+  --player-h: 40px;
+  --eval-w: 28px;
+  --side-w: 380px;
+  --gap: 16px;
+  /* Tabla staje u visinu ekrana i ostavlja mesta za panel desno */
+  --board: min(
+    calc(100vh - 2 * var(--player-h) - 110px),
+    calc(100vw - 2 * 16px - var(--eval-w) - var(--side-w) - 2 * var(--gap)),
+    760px
+  );
+  --sq-light: #ebecd0;
+  --sq-dark: #779556;
+}
+
+.review-page {
+  max-width: calc(var(--board) + var(--eval-w) + var(--side-w) + 2 * var(--gap) + 32px);
+  margin: 0 auto;
+  padding: 16px 16px 32px;
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.review-header .back-link { white-space: nowrap; }
+
+.review-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.review-title h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.review {
+  display: flex;
+  gap: var(--gap);
+  align-items: flex-start;
+}
+
+/* ------------------------------------------------------------ tabla */
+
+.board-col { flex: none; }
+
+.player {
+  height: var(--player-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: calc(var(--eval-w) + 8px);
+  font-weight: 600;
+}
+.player .rating { font-weight: 400; }
+.player .player-acc {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.board-row {
+  display: flex;
+  gap: 8px;
+}
+
+.board-wrap {
+  position: relative;
+  width: var(--board);
+  height: var(--board);
+}
+
+#board {
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+/* Zelena tabla kao na Chess.com-u (a8 je svetlo polje) */
+#board cg-board {
+  background-color: var(--sq-light);
+  background-image: repeating-conic-gradient(var(--sq-dark) 0 25%, var(--sq-light) 0 50%);
+  background-size: 25% 25%;
+}
+
+#board cg-board square.last-move { background-color: rgba(255, 255, 51, 0.45); }
+#board cg-board square.check {
+  background: radial-gradient(ellipse at center, #ff0000 0%, #e70000 25%, rgba(169, 0, 0, 0) 89%);
+}
+
+/* Koordinate u bojama polja (chessground dodaje klasu .black samo kad je tabla okrenuta) */
+#board coords { font-size: 11px; font-weight: 700; opacity: 1; }
+#board coords:not(.black) coord:nth-child(odd),
+#board coords.black coord:nth-child(even) { color: var(--sq-light); }
+#board coords:not(.black) coord:nth-child(even),
+#board coords.black coord:nth-child(odd) { color: var(--sq-dark); }
+
+/* Ikonica oznake na polju odigranog poteza */
+.board-icon {
+  position: absolute;
+  z-index: 20;
+  width: max(20px, calc(var(--board) * 0.05));
+  height: max(20px, calc(var(--board) * 0.05));
+  transform: translate(-60%, -40%);
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+.board-icon .cls-icon { width: 100%; height: 100%; font-size: calc(max(20px, var(--board) * 0.05) * 0.5); }
+
+/* ------------------------------------------------------------ eval bar */
+
+.eval-bar {
+  position: relative;
+  width: var(--eval-w);
+  height: var(--board);
+  background: #403d39;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.eval-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 50%;
+  background: #f0eee9;
+  transition: height 0.25s ease;
+}
+.eval-bar.flipped .eval-fill { bottom: auto; top: 0; }
+
+.eval-text {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.eval-text.at-bottom { bottom: 6px; color: #403d39; }
+.eval-text.at-top { top: 6px; color: #f0eee9; }
+/* Tekst je uz stranu koja vodi; kad je tabla okrenuta, beli je gore */
+.eval-text.white-side { color: #403d39; }
+.eval-text.black-side { color: #f0eee9; }
+
+/* ------------------------------------------------------------ desni panel */
+
+.side {
+  width: var(--side-w);
+  flex: none;
+  height: calc(var(--board) + 2 * var(--player-h));
+  display: flex;
+  flex-direction: column;
+}
+
+.accuracy {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 14px 14px 10px;
+}
+
+.acc-player { min-width: 0; }
+.acc-name {
+  font-size: 13px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+.acc-name.me { color: var(--text); font-weight: 600; }
+.acc-box {
+  border-radius: 6px;
+  padding: 6px 0;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.acc-box.white { background: #f0eee9; color: #262421; }
+.acc-box.black { background: #403d39; color: #f0eee9; border: 1px solid #55524d; }
+.acc-label { font-size: 11px; color: var(--muted); text-align: center; margin-top: 3px; }
+
+.counts {
+  margin: 0 14px 8px;
+  font-size: 13px;
+}
+.counts summary {
+  cursor: pointer;
+  color: var(--muted);
+  padding: 4px 0;
+}
+.counts summary:hover { color: var(--text); }
+.counts table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+.counts td { padding: 3px 4px; }
+.counts td.n { text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; width: 64px; }
+.counts .label-cell { display: flex; align-items: center; gap: 8px; }
+
+.chart-wrap {
+  position: relative;
+  height: 96px;
+  margin: 0 14px 10px;
+  flex: none;
+}
+.chart-wrap canvas { cursor: pointer; }
+.chart-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 13px;
+  background: #2b2926;
+  border-radius: 4px;
+}
+.chart-empty[hidden] { display: none; }
+
+/* Objašnjenje trenutnog poteza */
+.coach {
+  margin: 0 14px 10px;
+  padding: 10px 12px;
+  background: #2b2926;
+  border-radius: 6px;
+  min-height: 62px;
+  font-size: 14px;
+  flex: none;
+}
+.coach-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.coach-head .eval-chip { margin-left: auto; }
+.coach-best { margin-top: 4px; color: var(--muted); }
+.coach-best strong { color: var(--win); }
+.eval-chip {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.eval-chip.white { background: #f0eee9; color: #262421; }
+.eval-chip.black { background: #403d39; color: #f0eee9; }
+
+/* Lista poteza */
+.moves {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+  padding: 4px 0;
+  font-size: 14px;
+}
+.move-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 1fr;
+  align-items: center;
+  padding: 0 10px;
+}
+.move-row:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+.move-no { color: var(--muted); font-size: 13px; }
+.move {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  margin: 1px 4px 1px 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.move:hover { background: var(--panel-hover); }
+.move.active { background: #4b4844; }
+.move .cls-icon { width: 16px; height: 16px; font-size: 8.5px; }
+
+.nav {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--border);
+  flex: none;
+}
+.nav button {
+  height: 40px;
+  border: none;
+  border-radius: 6px;
+  background: #3c3a37;
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+}
+.nav button:hover { background: #4b4844; }
+.nav button:disabled { opacity: 0.35; cursor: default; }
+.nav #btn-next { background: var(--accent); color: #fff; }
+.nav #btn-next:hover { background: #95c95c; }
+.nav #btn-next:disabled { background: #3c3a37; }
+
+/* ------------------------------------------------------------ ikonice oznaka */
+
+.cls-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 800;
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.cls-icon svg { width: 72%; height: 72%; }
+
+/* ------------------------------------------------------------ uži ekrani */
+
+@media (max-width: 900px) {
+  :root {
+    --board: min(calc(100vw - 32px - var(--eval-w) - 8px), 600px);
+  }
+  .review { flex-direction: column; align-items: center; }
+  .side { width: 100%; height: auto; }
+  .moves { max-height: 320px; }
+}

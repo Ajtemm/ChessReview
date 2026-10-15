@@ -1,9 +1,12 @@
 """FastAPI aplikacija: API za partije, statičke stranice i analiza u pozadini."""
 
+import io
 import logging
 import threading
 from contextlib import asynccontextmanager
 
+import chess
+import chess.pgn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -112,6 +115,74 @@ def api_games() -> list[dict]:
         return [_game_summary(r) for r in db.list_games(conn)]
     finally:
         conn.close()
+
+
+def _review_data(pgn: str, analysis: dict[int, dict]) -> dict:
+    """Pozicije (FEN + ocena) i potezi za Review ekran.
+
+    Pozicije i potezi se prave iz PGN-a, pa ekran radi i pre nego što je analiza
+    gotova; ocene i oznake se dodaju iz tabele moves kad postoje.
+    `positions[k]` je pozicija posle k-tog polupoteza (0 = početna).
+    """
+    game = chess.pgn.read_game(io.StringIO(pgn))
+    board = game.board()
+
+    def position(last_move: str | None, row, cp_key: str, mate_key: str, mover: str) -> dict:
+        has_eval = row is not None and (row[cp_key] is not None or row[mate_key] is not None)
+        return {
+            "fen": board.fen(),
+            "turn": "white" if board.turn == chess.WHITE else "black",
+            "check": board.is_check(),
+            "last_move": last_move,
+            "cp": row[cp_key] if row else None,
+            "mate": row[mate_key] if row else None,
+            "win": analyzer.white_win_percent(row[cp_key], row[mate_key], mover) if has_eval else None,
+        }
+
+    # Početna pozicija: ocena pre prvog poteza
+    positions = [position(None, analysis.get(1), "eval_before_cp", "eval_before_mate", "white")]
+    moves = []
+    for ply, move in enumerate(game.mainline_moves(), start=1):
+        row = analysis.get(ply)
+        color = "white" if board.turn == chess.WHITE else "black"
+        moves.append({
+            "ply": ply,
+            "move_number": board.fullmove_number,
+            "color": color,
+            "san": board.san(move),
+            "uci": move.uci(),
+            "classification": row["classification"] if row else None,
+            "best_san": row["best_move_san"] if row else None,
+            "best_uci": row["best_move_uci"] if row else None,
+            "pv": row["pv"] if row else None,
+        })
+        board.push(move)
+        positions.append(position(move.uci(), row, "eval_after_cp", "eval_after_mate", color))
+    return {"positions": positions, "moves": moves}
+
+
+@app.get("/api/games/{gid}")
+def api_game(gid: str) -> dict:
+    """Sve za Review jedne partije: podaci o partiji, pozicije sa ocenama i potezi."""
+    conn = db.connect()
+    try:
+        game = db.get_game_by_id(conn, gid)
+        if game is None:
+            raise HTTPException(status_code=404, detail="Partija nije pronađena")
+        analysis = {m["ply"]: m for m in db.get_moves(conn, game["url"])}
+    finally:
+        conn.close()
+
+    summary = _game_summary(game)
+    summary.update({
+        "white": game["white"],
+        "black": game["black"],
+        "white_rating": game["white_rating"],
+        "black_rating": game["black_rating"],
+        "white_accuracy": game["white_accuracy"],
+        "black_accuracy": game["black_accuracy"],
+    })
+    return {"game": summary, **_review_data(game["pgn"], analysis)}
 
 
 @app.get("/")

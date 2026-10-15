@@ -131,6 +131,11 @@ def win_percent(cp: int) -> float:
     return 50 + 50 * (2 / (1 + math.exp(-0.00368208 * cp)) - 1)
 
 
+def white_win_percent(cp: int | None, mate: int | None, mover: str) -> float:
+    """Win% iz ugla belog za ocenu iz baze; `mover` je ko je odigrao poslednji potez."""
+    return win_percent(_white_cp(cp, mate, mover))
+
+
 def move_accuracy(win_before: float, win_after: float) -> float:
     """Lichess: tačnost jednog poteza iz pada win% (oba iz ugla igrača na potezu)."""
     if win_after >= win_before:

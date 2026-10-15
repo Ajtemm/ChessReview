@@ -55,5 +55,5 @@ Brilliant, Great, Best, Excellent, Good, Book, Inaccuracy, Mistake, Miss, Blunde
 - [x] Fetcher + baza
 - [x] Analizer (sve oznake poteza; tačnost; analiza u pozadini)
 - [x] Lista partija (UI)
-- [ ] Review ekran
+- [x] Review ekran (objašnjenje poteza za sada: oznaka + najbolji potez)
 - [ ] Scheduler + dugme za preuzimanje
