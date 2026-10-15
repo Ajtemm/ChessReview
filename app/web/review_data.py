@@ -7,7 +7,7 @@ import chess
 import chess.pgn
 
 from app import db
-from app.scoring import white_win_percent
+from app.analysis.scoring import white_win_percent
 
 
 def outcome(result: str, my_color: str) -> str:

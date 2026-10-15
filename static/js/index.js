@@ -1,6 +1,6 @@
 // Lista partija: učitavanje sa /api/games, status preuzimanja/analize sa /api/status
 // i dugme za ručno preuzimanje novih partija
-import { $, el } from "/static/dom.js";
+import { $, el } from "/static/js/dom.js";
 
 const REFRESH_BUSY_MS = 2000;   // dok traje preuzimanje ili analiza
 const REFRESH_IDLE_MS = 30000;  // inače, da se vide partije iz automatskog preuzimanja

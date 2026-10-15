@@ -6,7 +6,9 @@ from datetime import datetime, timezone
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from app import analyzer, db, fetcher
+from app import db
+from app.analysis import analyzer
+from app.chesscom import fetcher
 
 # Uvicorn-ov logger, da se poruke vide u istom izlazu kao i server
 log = logging.getLogger("uvicorn.error")

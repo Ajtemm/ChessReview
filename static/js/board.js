@@ -1,7 +1,7 @@
 // Tabla za Review: chessground, poslednji potez, šah, strelica najboljeg poteza
 // i ikonica oznake na polju na koje je figura stigla
 import { Chessground } from "/static/vendor/chessground/chessground.min.js";
-import { icon } from "/static/labels.js";
+import { icon } from "/static/js/labels.js";
 
 // "e2e4" -> ["e2", "e4"]
 const squares = (uci) => [uci.slice(0, 2), uci.slice(2, 4)];

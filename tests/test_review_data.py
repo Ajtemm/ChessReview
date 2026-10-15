@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.review_data import outcome, review_positions_and_moves
+from app.web.review_data import outcome, review_positions_and_moves
 
 # Školski mat: 7 polupoteza, poslednji je uzimanje sa matom
 SCHOLARS_MATE = "1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0"

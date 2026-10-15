@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import chess
 
-from app.scoring import game_accuracy, white_cp, win_percent
+from app.analysis.scoring import game_accuracy, white_cp, win_percent
 
 # Pad win% (u procentnim poenima) u odnosu na najbolji potez: gornje granice oznaka
 THRESHOLDS = (

@@ -3,7 +3,7 @@
 import chess
 import pytest
 
-from app.classify import classify_moves, is_sacrifice, sacrifice_confirmed
+from app.analysis.classify import classify_moves, is_sacrifice, sacrifice_confirmed
 
 
 def make_rows(specs: list[dict], start_fen: str = chess.STARTING_FEN) -> list[dict]:

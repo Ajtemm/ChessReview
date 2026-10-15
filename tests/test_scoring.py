@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.scoring import CP_CEILING, game_accuracy, move_accuracy, white_cp, win_percent
+from app.analysis.scoring import CP_CEILING, game_accuracy, move_accuracy, white_cp, win_percent
 
 
 def test_win_percent_je_50_za_jednaku_poziciju_i_simetrican():

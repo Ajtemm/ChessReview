@@ -121,8 +121,3 @@ def fetch_and_store() -> dict:
         total = db.count_games(conn)
 
     return {"fetched": len(games), "new": new, "total": total}
-
-
-if __name__ == "__main__":
-    stats = fetch_and_store()
-    print(f"Preuzeto: {stats['fetched']}, novih: {stats['new']}, ukupno u bazi: {stats['total']}")

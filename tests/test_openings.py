@@ -2,7 +2,7 @@
 
 import chess
 
-from app import openings
+from app.analysis import openings
 
 
 def test_load_book_sadrzi_sve_medjupozicije_i_pravi_kes(tmp_path):

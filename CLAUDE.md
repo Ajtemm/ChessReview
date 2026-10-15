@@ -47,24 +47,31 @@ Brilliant, Great, Best, Excellent, Good, Book, Inaccuracy, Mistake, Miss, Blunde
   - Zato je u .claude/launch.json server bez --reload: posle izmene Python koda restartuj
     server. Izmene u static/ ne traže restart.
 - Testovi: pytest (testovi u tests/, podešavanje u pytest.ini)
-- Analiza iz komandne linije: python -m app.analyzer [--game URL | --show URL | --classify | --stats]
+- Analiza iz komandne linije: python -m app.analysis [--game URL | --show URL | --classify | --stats]
+- Preuzimanje iz komandne linije: python -m app.chesscom
 
 ## Struktura
-- app/main.py         FastAPI aplikacija i rute
-- app/background.py   posao u pozadini: analiza novih partija, preuzimanje, scheduler
-- app/review_data.py  podaci za UI (lista partija, Review ekran)
-- app/fetcher.py      Chess.com API
-- app/analyzer.py     analiza partija iz baze + komande (python -m app.analyzer)
-- app/engine.py       Stockfish: ocena pozicija (MultiPV 2)
-- app/classify.py     oznake poteza (Brilliant ... Blunder, Book, Miss)
-- app/scoring.py      win% i tačnost (Lichess formule)
-- app/openings.py     knjiga otvaranja (data/openings/*.tsv)
-- app/db.py           SQLite; `with db.connection() as conn:` za konekciju
-- app/config.py       učitavanje config.json
-- static/             frontend: index.* (lista), review.* (Review ekran), board.js (tabla),
-                      eval-chart.js (grafikon), labels.js (oznake), format.js, dom.js, sounds.js
-- tests/              pytest testovi
-- config.json         podešavanja (već postoji)
+- app/main.py                 ulaz za uvicorn: FastAPI aplikacija, statički fajlovi, lifespan
+- app/config.py, app/db.py    config.json i SQLite (`with db.connection() as conn:`), zajedničko
+- app/analysis/               analiza partija
+  - engine.py                 Stockfish: ocena pozicija (MultiPV 2)
+  - classify.py               oznake poteza (Brilliant ... Blunder, Book, Miss)
+  - scoring.py                win% i tačnost (Lichess formule)
+  - openings.py               knjiga otvaranja (data/openings/*.tsv)
+  - analyzer.py               analiza partija iz baze (Stockfish + oznake -> baza)
+  - cli.py, __main__.py       komande (python -m app.analysis)
+- app/chesscom/fetcher.py     Chess.com API (python -m app.chesscom)
+- app/web/                    server
+  - routes.py                 API i HTML stranice
+  - review_data.py            podaci za UI (lista partija, Review ekran)
+  - background.py             posao u pozadini: analiza novih partija, preuzimanje, scheduler
+- static/                     frontend: index.html, review.html
+  - css/                      style.css (zajednički), review.css
+  - js/                       index.js (lista), review.js (Review ekran), board.js (tabla),
+                              eval-chart.js (grafikon), labels.js (oznake), format.js, dom.js, sounds.js
+  - vendor/                   chessground, Chart.js
+- tests/                      pytest testovi
+- config.json                 podešavanja (već postoji)
 
 ## Stanje
 - [x] Fetcher + baza

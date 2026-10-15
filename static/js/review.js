@@ -1,11 +1,11 @@
 // Review jedne partije: stanje ekrana, paneli, navigacija i učitavanje podataka.
 // Tabla je u board.js, grafikon u eval-chart.js, oznake u labels.js, zvuk u sounds.js.
-import { ReviewBoard } from "/static/board.js";
-import { $, el } from "/static/dom.js";
-import { createEvalChart } from "/static/eval-chart.js";
-import { evalText, hasEval, whiteIsBetter } from "/static/format.js";
-import { BAD_LABELS, icon, LABEL_ORDER, LABELS } from "/static/labels.js";
-import { isMuted, playSound, setMuted } from "/static/sounds.js";
+import { ReviewBoard } from "/static/js/board.js";
+import { $, el } from "/static/js/dom.js";
+import { createEvalChart } from "/static/js/eval-chart.js";
+import { evalText, hasEval, whiteIsBetter } from "/static/js/format.js";
+import { BAD_LABELS, icon, LABEL_ORDER, LABELS } from "/static/js/labels.js";
+import { isMuted, playSound, setMuted } from "/static/js/sounds.js";
 
 const POLL_MS = 5000;  // dok analiza nije gotova
 

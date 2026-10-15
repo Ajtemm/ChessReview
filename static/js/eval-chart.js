@@ -1,6 +1,6 @@
 // Grafikon ocene kroz partiju (Chart.js, učitan kao globalni `Chart`)
-import { LABELS } from "/static/labels.js";
-import { evalText, moveLabel } from "/static/format.js";
+import { LABELS } from "/static/js/labels.js";
+import { evalText, moveLabel } from "/static/js/format.js";
 
 // Oznake koje dobijaju tačku u boji na grafikonu
 const CHART_MARKS = new Set(["brilliant", "great", "miss", "mistake", "blunder"]);
