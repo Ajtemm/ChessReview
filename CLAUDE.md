@@ -52,8 +52,8 @@ Brilliant, Great, Best, Excellent, Good, Book, Inaccuracy, Mistake, Miss, Blunde
 - config.json        podešavanja (već postoji)
 
 ## Stanje
-- [ ] Fetcher + baza
-- [ ] Analizer
-- [ ] Lista partija (UI)
+- [x] Fetcher + baza
+- [x] Analizer (sve oznake poteza; tačnost; analiza u pozadini)
+- [x] Lista partija (UI)
 - [ ] Review ekran
 - [ ] Scheduler + dugme za preuzimanje

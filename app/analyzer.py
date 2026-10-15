@@ -245,6 +245,12 @@ BRILLIANT_MAX_WIN_BEFORE = 90.0     # a nije bila već potpuno dobijena
 GREAT_MIN_SECOND_DROP = 20.0
 # Great samo dok partija nije odlučena (win% igrača pre poteza)
 GREAT_WIN_RANGE = (10.0, 90.0)
+# Miss: posle protivnikove greške potez bi bio Mistake/Blunder, ali igrač nije pao
+# ispod pozicije koju je imao pre te greške (uz ovu toleranciju) - samo je propustio priliku
+MISS_TOLERANCE = 5.0
+# Greške posle kojih propušten potez postaje Miss. Bez "miss": kad protivnik propusti
+# da kazni moju grešku, a ja je ponovim, to je moja nova greška, ne propuštena prilika
+MISS_AFTER = ("mistake", "blunder")
 
 
 def _label_by_drop(drop: float) -> str:
@@ -322,6 +328,7 @@ def classify_moves(moves: list, book: set[str]) -> tuple[dict[int, str], dict[st
     labels: dict[int, str] = {}
     in_book = True
     prev_capture_square = None
+    prev_win_before = 50.0  # win% protivnika pre njegovog poslednjeg poteza (njegov ugao)
     white_wins: list[float] = []
 
     for i, m in enumerate(moves):
@@ -373,7 +380,7 @@ def classify_moves(moves: list, book: set[str]) -> tuple[dict[int, str], dict[st
                 # Očigledni potezi nisu Great: uzimanje nazad na istom polju,
                 # uzimanje posle protivnikove greške (kažnjavanje) i mat u 1
                 recapture = is_capture and move.to_square == prev_capture_square
-                punishes = is_capture and labels.get(m["ply"] - 1) in ("mistake", "blunder")
+                punishes = is_capture and labels.get(m["ply"] - 1) in ("mistake", "miss", "blunder")
                 if (
                     second_drop >= GREAT_MIN_SECOND_DROP
                     and GREAT_WIN_RANGE[0] <= win_before <= GREAT_WIN_RANGE[1]
@@ -382,9 +389,15 @@ def classify_moves(moves: list, book: set[str]) -> tuple[dict[int, str], dict[st
                     and not board_after.is_checkmate()
                 ):
                     label = "great"
+            elif label in ("mistake", "blunder") and labels.get(m["ply"] - 1) in MISS_AFTER:
+                # Pozicija koju sam imao pre protivnikove greške, iz mog ugla
+                win_before_error = 100 - prev_win_before
+                if win_after >= win_before_error - MISS_TOLERANCE:
+                    label = "miss"
 
         labels[m["ply"]] = label
         prev_capture_square = move.to_square if is_capture else None
+        prev_win_before = win_before
 
     return labels, game_accuracy(white_wins)
 
@@ -522,7 +535,7 @@ def print_moves(conn: sqlite3.Connection, url: str, pv_len: int = 5) -> None:
 
 
 LABEL_ORDER = ("brilliant", "great", "best", "excellent", "good", "book",
-               "inaccuracy", "mistake", "blunder")
+               "inaccuracy", "mistake", "miss", "blunder")
 
 
 def print_stats() -> None:
