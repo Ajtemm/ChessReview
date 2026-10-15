@@ -1,0 +1,9 @@
+{
+  "chesscom_username": "Dukileeee",
+  "contact_email": "nikolapejic599@gmail.com",
+  "stockfish_path": "C:\\Users\\Atem\\PythonClaude\\stockfish\\stockfish-windows-x86-64-universal.exe",
+  "analysis_depth": 14,
+  "fetch_interval_minutes": 30,
+  "games_to_fetch": 20,
+  "database_path": "data/chess_review.db"
+}
