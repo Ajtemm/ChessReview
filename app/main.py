@@ -151,6 +151,7 @@ def _review_data(pgn: str, analysis: dict[int, dict]) -> dict:
             "color": color,
             "san": board.san(move),
             "uci": move.uci(),
+            "capture": board.is_capture(move),
             "classification": row["classification"] if row else None,
             "best_san": row["best_move_san"] if row else None,
             "best_uci": row["best_move_uci"] if row else None,

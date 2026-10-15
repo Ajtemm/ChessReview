@@ -296,7 +296,7 @@
 
 .nav {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 6px;
   padding: 10px 14px 14px;
   border-top: 1px solid var(--border);

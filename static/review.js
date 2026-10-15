@@ -1,5 +1,6 @@
 // Review jedne partije: tabla (chessground), eval bar, grafikon (Chart.js), lista poteza
 import { Chessground } from "/static/vendor/chessground/chessground.min.js";
+import { isMuted, playSound, setMuted } from "/static/sounds.js";
 
 const POLL_MS = 5000;  // dok analiza nije gotova
 
@@ -276,9 +277,26 @@ function renderNav() {
   $("btn-next").disabled = $("btn-last").disabled = state.ply === last;
 }
 
+// Zvuk pri promeni poteza: unazad običan potez, inače zvuk poteza na koji smo stigli
+// (šah ima prednost nad uzimanjem)
+function playMoveSound(fromPly) {
+  const { ply } = state;
+  if (ply === fromPly || ply === 0) return;
+  if (ply === fromPly - 1) {
+    playSound("move");
+    return;
+  }
+  const move = state.data.moves[ply - 1];
+  if (state.data.positions[ply].check) playSound("check");
+  else if (move.capture) playSound("capture");
+  else playSound("move");
+}
+
 function goTo(ply, animate = true) {
   const last = state.data.moves.length;
+  const fromPly = state.ply;
   state.ply = Math.max(0, Math.min(last, ply));
+  playMoveSound(fromPly);
   // Skok preko više poteza bez animacije, da figure ne "lete" preko table
   renderBoard(animate);
   renderEvalBar();
@@ -437,6 +455,8 @@ function bindControls() {
   $("btn-next").addEventListener("click", () => goTo(state.ply + 1));
   $("btn-last").addEventListener("click", () => goTo(state.data.moves.length, false));
   $("btn-flip").addEventListener("click", flip);
+  $("btn-sound").addEventListener("click", toggleSound);
+  renderSoundButton();
 
   document.addEventListener("keydown", (e) => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -449,6 +469,8 @@ function bindControls() {
       End: () => goTo(state.data.moves.length, false),
       f: flip,
       F: flip,
+      m: toggleSound,
+      M: toggleSound,
     };
     const action = actions[e.key];
     if (!action) return;
@@ -457,6 +479,20 @@ function bindControls() {
   });
 
   window.addEventListener("resize", () => cg.redrawAll());
+}
+
+function renderSoundButton() {
+  const btn = $("btn-sound");
+  const muted = isMuted();
+  btn.textContent = muted ? "🔇" : "🔊";
+  btn.title = muted ? "Uključi zvuk (M)" : "Isključi zvuk (M)";
+  btn.setAttribute("aria-label", btn.title);
+  btn.setAttribute("aria-pressed", String(muted));
+}
+
+function toggleSound() {
+  setMuted(!isMuted());
+  renderSoundButton();
 }
 
 function flip() {
