@@ -115,13 +115,10 @@ def fetch_and_store() -> dict:
 
     games = fetch_recent_games(client, username, int(config.get("games_to_fetch", 20)))
 
-    conn = db.connect()
-    try:
+    with db.connection() as conn:
         with conn:
             new = sum(db.insert_game(conn, g) for g in games)
         total = db.count_games(conn)
-    finally:
-        conn.close()
 
     return {"fetched": len(games), "new": new, "total": total}
 

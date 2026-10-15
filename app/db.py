@@ -1,6 +1,8 @@
 """SQLite baza: čuvanje partija i analize poteza."""
 
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from app.config import load_config, resolve_path
@@ -81,6 +83,19 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
     conn.executescript(SCHEMA)
     _add_missing_columns(conn)
     return conn
+
+
+@contextmanager
+def connection(db_path: Path | None = None) -> Iterator[sqlite3.Connection]:
+    """`with db.connection() as conn:` - konekcija koja se uvek zatvori na kraju bloka.
+
+    Transakcije se i dalje potvrđuju sa `with conn:` unutar bloka.
+    """
+    conn = connect(db_path)
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def _add_missing_columns(conn: sqlite3.Connection) -> None:
@@ -184,6 +199,17 @@ def save_classifications(conn: sqlite3.Connection, game_url: str, labels: dict[i
         "UPDATE moves SET classification = ? WHERE game_url = ? AND ply = ?",
         [(label, game_url, ply) for ply, label in labels.items()],
     )
+
+
+def label_counts(conn: sqlite3.Connection) -> dict[tuple[str, bool], int]:
+    """Broj poteza po oznaci u analiziranim partijama: {(oznaka, moj_potez): broj}."""
+    rows = conn.execute(
+        """SELECT m.classification AS label, m.color = g.my_color AS mine, COUNT(*) AS n
+           FROM moves m JOIN games g ON g.url = m.game_url
+           WHERE g.analysis_status = 'done'
+           GROUP BY 1, 2"""
+    ).fetchall()
+    return {(r["label"], bool(r["mine"])): r["n"] for r in rows}
 
 
 def set_accuracy(conn: sqlite3.Connection, url: str, white: float | None, black: float | None) -> None:
