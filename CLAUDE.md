@@ -40,7 +40,12 @@ Brilliant, Great, Best, Excellent, Good, Book, Inaccuracy, Mistake, Miss, Blunde
 ## Komande
 - Aktiviranje okruženja: .venv\Scripts\activate
 - Instalacija: pip install -r requirements.txt
-- Pokretanje: uvicorn app.main:app --reload
+- Pokretanje: uvicorn app.main:app --reload (u običnom konzolnom prozoru: cmd/PowerShell)
+  - --reload na Windows-u gasi stari proces slanjem Ctrl+C preko konzole. Kad se server
+    pokreće bez vidljive konzole (Claude preview, .claude/launch.json), taj signal često
+    ne stigne i restart se zaglavi ("Reloading..." bez "Shutting down"; služi stari kod).
+  - Zato je u .claude/launch.json server bez --reload: posle izmene Python koda restartuj
+    server. Izmene u static/ ne traže restart.
 - Testovi: pytest
 
 ## Struktura
