@@ -1,5 +1,6 @@
 // Lista partija: učitavanje sa /api/games, status preuzimanja/analize sa /api/status
 // i dugme za ručno preuzimanje novih partija
+import { $, el } from "/static/dom.js";
 
 const REFRESH_BUSY_MS = 2000;   // dok traje preuzimanje ili analiza
 const REFRESH_IDLE_MS = 30000;  // inače, da se vide partije iz automatskog preuzimanja
@@ -13,22 +14,14 @@ const STATUS_LABELS = {
 };
 const TIME_CLASS_LABELS = { bullet: "Bullet", blitz: "Blitz", rapid: "Rapid", daily: "Dnevna" };
 
-const body = document.getElementById("games-body");
-const message = document.getElementById("message");
-const summary = document.getElementById("summary");
-const fetchBtn = document.getElementById("fetch-btn");
-const fetchState = document.getElementById("fetch-state");
-const fetchMeta = document.getElementById("fetch-meta");
+const body = $("games-body");
+const message = $("message");
+const summary = $("summary");
+const fetchBtn = $("fetch-btn");
+const fetchState = $("fetch-state");
+const fetchMeta = $("fetch-meta");
 
 let refreshTimer = null;
-
-// Mali pomoćnik za pravljenje elemenata (tekst ide kroz textContent, bez HTML injekcije)
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined && text !== null) node.textContent = text;
-  return node;
-}
 
 function formatTimeControl(tc) {
   if (!tc) return "—";
