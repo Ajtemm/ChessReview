@@ -46,15 +46,25 @@ Brilliant, Great, Best, Excellent, Good, Book, Inaccuracy, Mistake, Miss, Blunde
     ne stigne i restart se zaglavi ("Reloading..." bez "Shutting down"; služi stari kod).
   - Zato je u .claude/launch.json server bez --reload: posle izmene Python koda restartuj
     server. Izmene u static/ ne traže restart.
-- Testovi: pytest
+- Testovi: pytest (testovi u tests/, podešavanje u pytest.ini)
+- Analiza iz komandne linije: python -m app.analyzer [--game URL | --show URL | --classify | --stats]
 
 ## Struktura
-- app/main.py        FastAPI, rute, scheduler
-- app/fetcher.py     Chess.com API
-- app/analyzer.py    Stockfish i oznake poteza
-- app/db.py          SQLite
-- static/            frontend
-- config.json        podešavanja (već postoji)
+- app/main.py         FastAPI aplikacija i rute
+- app/background.py   posao u pozadini: analiza novih partija, preuzimanje, scheduler
+- app/review_data.py  podaci za UI (lista partija, Review ekran)
+- app/fetcher.py      Chess.com API
+- app/analyzer.py     analiza partija iz baze + komande (python -m app.analyzer)
+- app/engine.py       Stockfish: ocena pozicija (MultiPV 2)
+- app/classify.py     oznake poteza (Brilliant ... Blunder, Book, Miss)
+- app/scoring.py      win% i tačnost (Lichess formule)
+- app/openings.py     knjiga otvaranja (data/openings/*.tsv)
+- app/db.py           SQLite; `with db.connection() as conn:` za konekciju
+- app/config.py       učitavanje config.json
+- static/             frontend: index.* (lista), review.* (Review ekran), board.js (tabla),
+                      eval-chart.js (grafikon), labels.js (oznake), format.js, dom.js, sounds.js
+- tests/              pytest testovi
+- config.json         podešavanja (već postoji)
 
 ## Stanje
 - [x] Fetcher + baza
