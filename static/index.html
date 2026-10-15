@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="sr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chess Review</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="page-header">
+      <h1>Partije</h1>
+      <div class="summary" id="summary"></div>
+    </header>
+
+    <section class="panel">
+      <div class="table-wrap">
+        <table class="games">
+          <thead>
+            <tr>
+              <th>Protivnik</th>
+              <th>Rezultat</th>
+              <th>Boja</th>
+              <th class="hide-sm">Datum</th>
+              <th>Vreme</th>
+              <th class="num">Tačnost</th>
+              <th>Analiza</th>
+            </tr>
+          </thead>
+          <tbody id="games-body"></tbody>
+        </table>
+      </div>
+      <div class="message" id="message">Učitavanje…</div>
+    </section>
+  </main>
+
+  <script src="/static/index.js"></script>
+</body>
+</html>

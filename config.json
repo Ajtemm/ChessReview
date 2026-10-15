@@ -5,5 +5,6 @@
   "analysis_depth": 14,
   "fetch_interval_minutes": 30,
   "games_to_fetch": 20,
-  "database_path": "data/chess_review.db"
+  "database_path": "data/chess_review.db",
+  "openings_dir": "data/openings"
 }
