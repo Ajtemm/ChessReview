@@ -1,4 +1,4 @@
-"""SQLite baza: čuvanje partija."""
+"""SQLite baza: čuvanje partija i analize poteza."""
 
 import sqlite3
 from pathlib import Path
@@ -23,6 +23,25 @@ CREATE TABLE IF NOT EXISTS games (
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_games_end_time ON games(end_time);
+
+-- Analiza po polupotezu; ocene su uvek iz ugla belog (kao eval bar)
+CREATE TABLE IF NOT EXISTS moves (
+    game_url         TEXT NOT NULL REFERENCES games(url) ON DELETE CASCADE,
+    ply              INTEGER NOT NULL,          -- redni broj polupoteza od 1
+    move_number      INTEGER NOT NULL,          -- broj poteza kao u notaciji
+    color            TEXT NOT NULL,             -- 'white' ili 'black' (ko vuče potez)
+    fen_before       TEXT NOT NULL,
+    move_san         TEXT NOT NULL,
+    move_uci         TEXT NOT NULL,
+    eval_before_cp   INTEGER,                   -- centipešaci; NULL ako je mat
+    eval_before_mate INTEGER,                   -- mat u N (+ beli matira, - crni)
+    eval_after_cp    INTEGER,
+    eval_after_mate  INTEGER,
+    best_move_san    TEXT,
+    best_move_uci    TEXT,
+    pv               TEXT,                      -- glavna varijanta u SAN-u
+    PRIMARY KEY (game_url, ply)
+);
 """
 
 GAME_FIELDS = (
@@ -41,6 +60,7 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(SCHEMA)
     return conn
 
@@ -66,3 +86,44 @@ def list_games(conn: sqlite3.Connection, limit: int | None = None) -> list[sqlit
     if limit:
         sql += f" LIMIT {int(limit)}"
     return conn.execute(sql).fetchall()
+
+
+def get_game(conn: sqlite3.Connection, url: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM games WHERE url = ?", (url,)).fetchone()
+
+
+def list_games_by_status(conn: sqlite3.Connection, statuses: tuple[str, ...]) -> list[sqlite3.Row]:
+    """Partije sa datim statusom analize, od najstarije ka najnovijoj."""
+    placeholders = ", ".join("?" for _ in statuses)
+    return conn.execute(
+        f"SELECT * FROM games WHERE analysis_status IN ({placeholders}) ORDER BY end_time",
+        statuses,
+    ).fetchall()
+
+
+def set_status(conn: sqlite3.Connection, url: str, status: str) -> None:
+    conn.execute("UPDATE games SET analysis_status = ? WHERE url = ?", (status, url))
+
+
+MOVE_FIELDS = (
+    "game_url", "ply", "move_number", "color", "fen_before", "move_san", "move_uci",
+    "eval_before_cp", "eval_before_mate", "eval_after_cp", "eval_after_mate",
+    "best_move_san", "best_move_uci", "pv",
+)
+
+
+def save_moves(conn: sqlite3.Connection, game_url: str, moves: list[dict]) -> None:
+    """Zamenjuje analizu poteza za partiju (stari redovi se brišu)."""
+    conn.execute("DELETE FROM moves WHERE game_url = ?", (game_url,))
+    columns = ", ".join(MOVE_FIELDS)
+    placeholders = ", ".join(f":{f}" for f in MOVE_FIELDS)
+    conn.executemany(
+        f"INSERT INTO moves ({columns}) VALUES ({placeholders})",
+        [{**{f: m.get(f) for f in MOVE_FIELDS}, "game_url": game_url} for m in moves],
+    )
+
+
+def get_moves(conn: sqlite3.Connection, game_url: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM moves WHERE game_url = ? ORDER BY ply", (game_url,)
+    ).fetchall()
