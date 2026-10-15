@@ -9,8 +9,17 @@
 <body>
   <main class="page">
     <header class="page-header">
-      <h1>Partije</h1>
-      <div class="summary" id="summary"></div>
+      <div class="title-block">
+        <h1>Partije</h1>
+        <div class="summary" id="summary"></div>
+      </div>
+      <div class="fetch-box">
+        <button type="button" class="btn-primary" id="fetch-btn">Preuzmi nove partije</button>
+        <div class="fetch-status" id="fetch-status" aria-live="polite">
+          <div class="fetch-state" id="fetch-state"></div>
+          <div class="fetch-meta muted" id="fetch-meta"></div>
+        </div>
+      </div>
     </header>
 
     <section class="panel">

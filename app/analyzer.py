@@ -476,10 +476,12 @@ def analyze_game(
 def analyze_pending(
     statuses: tuple[str, ...] = TO_ANALYZE,
     should_stop: Callable[[], bool] = lambda: False,
+    on_progress: Callable[[int, int], None] = lambda current, total: None,
 ) -> dict:
     """Analizira sve partije sa datim statusom. Vraća statistiku.
 
-    `should_stop` se proverava između partija (za gašenje servera).
+    `should_stop` se proverava između partija (za gašenje servera), a
+    `on_progress(trenutna, ukupno)` se poziva pre svake partije (za prikaz u UI-ju).
     """
     config = load_config()
     conn = db.connect()
@@ -494,6 +496,7 @@ def analyze_pending(
         for i, game in enumerate(games, start=1):
             if should_stop():
                 break
+            on_progress(i, len(games))
             label = f"[{i}/{len(games)}] {game['white']} - {game['black']} ({game['end_time'][:10]})"
             try:
                 plies = analyze_game(conn, game["url"], engine=engine, config=config)

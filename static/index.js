@@ -1,7 +1,8 @@
-// Lista partija: učitavanje sa /api/games i periodično osvežavanje statusa analize
+// Lista partija: učitavanje sa /api/games, status preuzimanja/analize sa /api/status
+// i dugme za ručno preuzimanje novih partija
 
-const REFRESH_BUSY_MS = 5000;   // dok se nešto analizira
-const REFRESH_IDLE_MS = 30000;  // inače, da se vide nove partije
+const REFRESH_BUSY_MS = 2000;   // dok traje preuzimanje ili analiza
+const REFRESH_IDLE_MS = 30000;  // inače, da se vide partije iz automatskog preuzimanja
 
 const OUTCOME_LABELS = { win: "Pobeda", loss: "Poraz", draw: "Remi" };
 const STATUS_LABELS = {
@@ -15,6 +16,11 @@ const TIME_CLASS_LABELS = { bullet: "Bullet", blitz: "Blitz", rapid: "Rapid", da
 const body = document.getElementById("games-body");
 const message = document.getElementById("message");
 const summary = document.getElementById("summary");
+const fetchBtn = document.getElementById("fetch-btn");
+const fetchState = document.getElementById("fetch-state");
+const fetchMeta = document.getElementById("fetch-meta");
+
+let refreshTimer = null;
 
 // Mali pomoćnik za pravljenje elemenata (tekst ide kroz textContent, bez HTML injekcije)
 function el(tag, className, text) {
@@ -106,25 +112,94 @@ function renderSummary(games) {
   );
 }
 
+// Vreme za status: danas samo sat, inače i datum
+function formatWhen(iso) {
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return d.toDateString() === new Date().toDateString()
+    ? time
+    : `${pad(d.getDate())}.${pad(d.getMonth() + 1)}. ${time}`;
+}
+
+function newGamesText(n) {
+  if (n === 0) return "nema novih";
+  if (n === 1) return "1 nova";
+  return n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? `${n} nove` : `${n} novih`;
+}
+
+function renderStatus(status) {
+  const { fetch: f, analysis: a } = status;
+  fetchBtn.disabled = f.fetching;
+
+  fetchState.className = "fetch-state";
+  if (f.fetching) {
+    fetchState.classList.add("busy");
+    fetchState.textContent = "Preuzimanje…";
+  } else if (a.running) {
+    fetchState.classList.add("busy");
+    fetchState.textContent = `Analizira se ${a.current}/${a.total}`;
+  } else if (f.last_error) {
+    fetchState.classList.add("error");
+    fetchState.textContent = `Greška pri preuzimanju: ${f.last_error}`;
+  } else {
+    fetchState.textContent = "";
+  }
+
+  const meta = [];
+  if (f.last_fetch_at) {
+    const result = f.last_result ? ` (${newGamesText(f.last_result.new)})` : "";
+    meta.push(`Poslednje preuzimanje: ${formatWhen(f.last_fetch_at)}${result}`);
+  }
+  if (f.next_run_at) meta.push(`sledeće automatski u ${formatWhen(f.next_run_at)}`);
+  fetchMeta.textContent = meta.join(" · ");
+}
+
+function scheduleLoad(ms) {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(load, ms);
+}
+
 async function load() {
   let busy = false;
   try {
-    const resp = await fetch("/api/games");
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const games = await resp.json();
+    const [gamesResp, statusResp] = await Promise.all([fetch("/api/games"), fetch("/api/status")]);
+    if (!gamesResp.ok) throw new Error(`HTTP ${gamesResp.status}`);
+    const games = await gamesResp.json();
 
     body.replaceChildren(...games.map(renderRow));
     renderSummary(games);
     message.hidden = games.length > 0;
     message.className = "message";
-    message.textContent = "Još nema partija. Pokreni preuzimanje partija.";
+    message.textContent = "Još nema partija. Klikni „Preuzmi nove partije“.";
     busy = games.some((g) => g.status === "pending" || g.status === "running");
+
+    if (statusResp.ok) {
+      const status = await statusResp.json();
+      renderStatus(status);
+      busy = busy || status.fetch.fetching || status.analysis.running;
+    }
   } catch (err) {
     message.hidden = false;
     message.className = "message error";
     message.textContent = `Greška pri učitavanju partija (${err.message}).`;
   }
-  setTimeout(load, busy ? REFRESH_BUSY_MS : REFRESH_IDLE_MS);
+  scheduleLoad(busy ? REFRESH_BUSY_MS : REFRESH_IDLE_MS);
 }
+
+fetchBtn.addEventListener("click", async () => {
+  fetchBtn.disabled = true;
+  try {
+    const resp = await fetch("/api/fetch", { method: "POST" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    renderStatus(await resp.json());
+  } catch (err) {
+    fetchState.className = "fetch-state error";
+    fetchState.textContent = `Greška: ${err.message}`;
+    fetchBtn.disabled = false;
+  }
+  // Brzo osvežavanje dok traje preuzimanje i analiza
+  scheduleLoad(REFRESH_BUSY_MS);
+});
 
 load();

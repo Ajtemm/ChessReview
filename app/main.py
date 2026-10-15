@@ -1,17 +1,19 @@
-"""FastAPI aplikacija: API za partije, statičke stranice i analiza u pozadini."""
+"""FastAPI aplikacija: API za partije, statičke stranice, preuzimanje i analiza u pozadini."""
 
 import io
 import logging
 import threading
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 import chess
 import chess.pgn
+from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import analyzer, db
+from app import analyzer, db, fetcher
 from app.config import ROOT_DIR, load_config
 
 STATIC_DIR = ROOT_DIR / "static"
@@ -32,12 +34,26 @@ class AnalysisWorker:
         self._wake = threading.Event()
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, name="analysis-worker", daemon=True)
+        self._lock = threading.Lock()
+        self._progress: tuple[int, int] | None = None  # (trenutna partija, ukupno) dok analiza traje
 
     def start(self) -> None:
         self._thread.start()
 
     def trigger(self) -> None:
         self._wake.set()
+
+    def progress(self) -> dict:
+        """Napredak analize za UI: {"running", "current", "total"}."""
+        with self._lock:
+            if self._progress is None:
+                return {"running": False, "current": 0, "total": 0}
+            current, total = self._progress
+            return {"running": True, "current": current, "total": total}
+
+    def _set_progress(self, current: int, total: int) -> None:
+        with self._lock:
+            self._progress = (current, total)
 
     def stop(self) -> None:
         self._stop.set()
@@ -50,12 +66,77 @@ class AnalysisWorker:
             self._wake.clear()
             try:
                 # Partije sa greškom ne pokušavamo stalno; za njih je komanda analyzer-a
-                stats = analyzer.analyze_pending(("pending",), should_stop=self._stop.is_set)
+                stats = analyzer.analyze_pending(
+                    ("pending",), should_stop=self._stop.is_set, on_progress=self._set_progress
+                )
                 if stats["done"] or stats["error"]:
                     log.info("Analiza u pozadini: %s", stats)
             except Exception:
                 log.exception("Greška u pozadinskoj analizi")
+            finally:
+                with self._lock:
+                    self._progress = None
             self._wake.wait(self.poll_seconds)
+
+
+class FetchService:
+    """Preuzimanje novih partija sa Chess.com-a, na dugme i po rasporedu (APScheduler).
+
+    Istovremeno radi najviše jedno preuzimanje; posle preuzimanja odmah budi analizu.
+    """
+
+    def __init__(self, worker: AnalysisWorker):
+        self.worker = worker
+        self._busy = threading.Lock()   # zauzet dok preuzimanje traje
+        self._lock = threading.Lock()   # štiti polja stanja ispod
+        self.fetching = False
+        self.last_fetch_at: str | None = None   # poslednje uspešno preuzimanje (ISO, UTC)
+        self.last_result: dict | None = None
+        self.last_error: str | None = None
+
+    def start_in_background(self) -> bool:
+        """Pokreće preuzimanje u posebnoj niti. False ako preuzimanje već traje."""
+        if not self._busy.acquire(blocking=False):
+            return False
+        threading.Thread(target=self._run_locked, name="fetch", daemon=True).start()
+        return True
+
+    def run_scheduled(self) -> None:
+        """Posao za APScheduler (već radi u njegovoj niti)."""
+        if not self._busy.acquire(blocking=False):
+            log.info("Preuzimanje već traje, zakazano preuzimanje se preskače")
+            return
+        self._run_locked()
+
+    def _run_locked(self) -> None:
+        try:
+            with self._lock:
+                self.fetching = True
+                self.last_error = None
+            stats = fetcher.fetch_and_store()
+            with self._lock:
+                self.last_result = stats
+                self.last_fetch_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            log.info("Preuzimanje partija: %s", stats)
+            # Budimo analizu i kad nema novih: pokupi i partije koje čekaju iz drugih razloga
+            self.worker.trigger()
+        except Exception as e:
+            log.exception("Greška pri preuzimanju partija")
+            with self._lock:
+                self.last_error = str(e) or e.__class__.__name__
+        finally:
+            with self._lock:
+                self.fetching = False
+            self._busy.release()
+
+    def snapshot(self) -> dict:
+        with self._lock:
+            return {
+                "fetching": self.fetching,
+                "last_fetch_at": self.last_fetch_at,
+                "last_result": self.last_result,
+                "last_error": self.last_error,
+            }
 
 
 @asynccontextmanager
@@ -69,9 +150,23 @@ async def lifespan(app: FastAPI):
 
     config = load_config()
     worker = AnalysisWorker(float(config.get("analysis_poll_seconds", 60)))
+    fetch_service = FetchService(worker)
     app.state.worker = worker
+    app.state.fetch_service = fetch_service
     worker.start()
+
+    # Automatsko preuzimanje: odmah po pokretanju, pa na interval iz config.json
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        fetch_service.run_scheduled, "interval",
+        minutes=float(config["fetch_interval_minutes"]),
+        id="fetch", next_run_time=datetime.now(timezone.utc),
+        max_instances=1, coalesce=True,
+    )
+    app.state.scheduler = scheduler
+    scheduler.start()
     yield
+    scheduler.shutdown(wait=False)
     worker.stop()
 
 
@@ -184,6 +279,31 @@ def api_game(gid: str) -> dict:
         "black_accuracy": game["black_accuracy"],
     })
     return {"game": summary, **_review_data(game["pgn"], analysis)}
+
+
+def _status() -> dict:
+    """Stanje preuzimanja i analize za UI."""
+    job = app.state.scheduler.get_job("fetch")
+    next_run = job.next_run_time if job else None
+    return {
+        "fetch": {
+            **app.state.fetch_service.snapshot(),
+            "next_run_at": next_run.isoformat(timespec="seconds") if next_run else None,
+        },
+        "analysis": app.state.worker.progress(),
+    }
+
+
+@app.get("/api/status")
+def api_status() -> dict:
+    return _status()
+
+
+@app.post("/api/fetch")
+def api_fetch() -> dict:
+    """Ručno pokretanje preuzimanja (dugme). Ne čeka kraj; napredak je u /api/status."""
+    started = app.state.fetch_service.start_in_background()
+    return {"started": started, **_status()}
 
 
 @app.get("/")

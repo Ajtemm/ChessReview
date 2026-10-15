@@ -61,4 +61,4 @@ Brilliant, Great, Best, Excellent, Good, Book, Inaccuracy, Mistake, Miss, Blunde
 - [x] Analizer (sve oznake poteza; tačnost; analiza u pozadini)
 - [x] Lista partija (UI)
 - [x] Review ekran (objašnjenje poteza za sada: oznaka + najbolji potez)
-- [ ] Scheduler + dugme za preuzimanje
+- [x] Scheduler + dugme za preuzimanje (preuzimanje i pri pokretanju servera)
