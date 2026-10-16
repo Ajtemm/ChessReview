@@ -40,6 +40,7 @@ Brilliant, Great, Best, Excellent, Good, Book, Inaccuracy, Mistake, Miss, Blunde
 ## Komande
 - Aktiviranje okruženja: .venv\Scripts\activate
 - Instalacija: pip install -r requirements.txt
+- Pokretanje dvoklikom: start.bat (server + otvara http://localhost:8000 u browseru)
 - Pokretanje: uvicorn app.main:app --reload (u običnom konzolnom prozoru: cmd/PowerShell)
   - --reload na Windows-u gasi stari proces slanjem Ctrl+C preko konzole. Kad se server
     pokreće bez vidljive konzole (Claude preview, .claude/launch.json), taj signal često
